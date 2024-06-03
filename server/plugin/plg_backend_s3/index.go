@@ -8,14 +8,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/aws/aws-sdk-go/service/sts"
 	. "github.com/mickael-kerjean/filestash/server/common"
 
 	"io"
@@ -49,35 +44,15 @@ func (this S3Backend) Init(params map[string]string, app *App) (IBackend, error)
 			params["region"] = "auto"
 		}
 	}
-	creds := []credentials.Provider{}
-	if params["access_key_id"] != "" || params["secret_access_key"] != "" {
-		creds = append(creds, &credentials.StaticProvider{Value: credentials.Value{
-			AccessKeyID:     params["access_key_id"],
-			SecretAccessKey: params["secret_access_key"],
-			SessionToken:    params["session_token"],
-		}})
-	}
-	if params["role_arn"] != "" {
-		sessOptions := session.Options{Config: aws.Config{Region: aws.String(params["region"])}}
-		creds = append(creds, &stscreds.AssumeRoleProvider{
-			Client:   sts.New(session.Must(session.NewSessionWithOptions(sessOptions))),
-			RoleARN:  params["role_arn"],
-			Duration: stscreds.DefaultDuration,
-		})
-	}
-	creds = append(
-		creds,
-		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.Must(session.NewSession()))},
-		&credentials.EnvProvider{},
-	)
-	config := &aws.Config{
-		Credentials:                   credentials.NewChainCredentials(creds),
-		CredentialsChainVerboseErrors: aws.Bool(true),
-		S3ForcePathStyle:              aws.Bool(true),
+
+	awsSession := session.Must(session.NewSession(&aws.Config{
 		Region:                        aws.String(params["region"]),
-	}
+		S3ForcePathStyle:              aws.Bool(true),
+		CredentialsChainVerboseErrors: aws.Bool(true),
+	}))
+
 	if params["endpoint"] != "" {
-		config.Endpoint = aws.String(params["endpoint"])
+		awsSession.Config.Endpoint = aws.String(params["endpoint"])
 	}
 	threadSize, err := strconv.Atoi(params["number_thread"])
 	if err != nil {
@@ -86,9 +61,9 @@ func (this S3Backend) Init(params map[string]string, app *App) (IBackend, error)
 		threadSize = 2
 	}
 	backend := &S3Backend{
-		config:     config,
+		config:     awsSession.Config,
 		params:     params,
-		client:     s3.New(session.New(config)),
+		client:     s3.New(awsSession),
 		Context:    app.Context,
 		threadSize: threadSize,
 	}

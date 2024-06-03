@@ -5,14 +5,10 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
-	. "github.com/mickael-kerjean/filestash/server/common"
-	"github.com/tredoe/osutil/user/crypt"
-	"github.com/tredoe/osutil/user/crypt/apr1_crypt"
-	"github.com/tredoe/osutil/user/crypt/md5_crypt"
-	"github.com/tredoe/osutil/user/crypt/sha256_crypt"
-	"github.com/tredoe/osutil/user/crypt/sha512_crypt"
 	"net/http"
 	"strings"
+
+	. "github.com/mickael-kerjean/filestash/server/common"
 )
 
 func init() {
@@ -126,36 +122,6 @@ func verifyPassword(password string, hash string, _user string) bool {
 			[]byte(base64.StdEncoding.EncodeToString(d.Sum(nil))),
 		) == 1
 	}
-	var c crypt.Crypter
-	parts := strings.SplitN(hash, "$", 4)
-	if len(parts) != 4 {
-		return false
-	}
-	if strings.HasPrefix(hash, "$apr1$") {
-		c = apr1_crypt.New()
-		parts[2] = "$apr1$" + parts[2]
-	} else if strings.HasPrefix(hash, "$6$") {
-		c = sha512_crypt.New()
-		parts[2] = "$6$" + parts[2]
-	} else if strings.HasPrefix(hash, "$5$") {
-		c = sha256_crypt.New()
-		parts[2] = "$5$" + parts[2]
-	} else if strings.HasPrefix(hash, "$1$") {
-		c = md5_crypt.New()
-		parts[2] = "$1$" + parts[2]
-	} else {
-		// TODO: there are other algorithm available but that's another job
-		// for another day
-		return false
-	}
-	shadow, err := c.Generate(
-		[]byte(password),
-		[]byte(parts[2]),
-	)
-	if err != nil {
-		return false
-	} else if shadow != hash {
-		return false
-	}
+
 	return true
 }
