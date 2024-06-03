@@ -5,6 +5,12 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
+	. "github.com/mickael-kerjean/filestash/server/common"
+	"github.com/tredoe/osutil/user/crypt"
+	"github.com/tredoe/osutil/user/crypt/apr1_crypt"
+	"github.com/tredoe/osutil/user/crypt/md5_crypt"
+	"github.com/tredoe/osutil/user/crypt/sha256_crypt"
+	"github.com/tredoe/osutil/user/crypt/sha512_crypt"
 	"net/http"
 	"strings"
 
